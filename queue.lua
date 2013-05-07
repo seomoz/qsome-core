@@ -42,22 +42,20 @@ function QsomeQueue:pop_subqueue(now)
         redis.call('lpush', key, unpack(available))
     end
 
+    -- Each queue should have a configurable rate limit on the number of jobs
+    -- that can be in flight in a queue at any given time.
+    local limit = tonumber(self:config('concurrency') or 1)
     local i = 0
     return  function()
                 while i < #available do
                     i = i + 1
                     local subqueue = redis.call('rpoplpush', key, key)
                     local running = Qless.queue(subqueue).locks.running(now)
-                    if running == 0 then
+                    if running < limit then
                         return subqueue
                     end
                 end
             end
-end
-
---! @brief Push a subqueue onto the subqueue queue for consideration
-function QsomeQueue:push_subqueue(now, queue)
-
 end
 
 --! @brief Pop the provided number of jobs from the queue
@@ -80,6 +78,28 @@ function QsomeQueue:pop(now, worker, count)
     return jids
 end
 
+--! @brief Peek at the next jobs available
+--! @param count -- number of jobs to peek
+function QsomeQueue:peek(now, count)
+    -- Ensure that count is in fact a number
+    count = assert(tonumber(count),
+        'Queue.peek(): Count not a number: ' .. tostring(count))
+    local jids = {}
+    local key = self:prefix()..':available'
+    local available = redis.call('lrange', key, 0, -1)
+    for i, subqueue in ipairs(available) do
+        if #jids >= count then
+            break
+        end
+        local _jids = Qless.queue(subqueue):peek(now, 1)
+        if #_jids then
+            local jid = _jids[1]
+            table.insert(jids, jid)
+        end
+    end
+    return jids
+end
+
 --! @brief Enqueue a job to be executed
 --! @param now - the current timestamp in seconds since epoch
 --! @param jid - job id
@@ -94,6 +114,9 @@ function QsomeQueue:put(now, jid, klass, hash, data, delay, ...)
     local hash  = assert(tonumber(hash),
         'Queue.put(): Hash missing or not a number: ' .. tostring(hash))
     local subqueue = self.name .. '-' .. tostring(hash % count + 1)
+    if not redis.call('zscore', Qsome.ns .. 'queues', self.name) then
+        redis.call('zadd', Qsome.ns .. 'queues', now, self.name)
+    end
     local response = Qless.queue(subqueue):put(
         now, jid, klass, data, delay, unpack(arg))
     if response then
@@ -140,6 +163,12 @@ function QsomeQueue:resize(size)
                             'zadd', Qless.queue(to):prefix(name), score, jid)
                         redis.call('hset', 'ql:j:' .. jid, 'queue', to)
                         table.insert(zrem, jid)
+                        if #zrem > 100 then
+                            redis.call('zrem',
+                                Qless.queue(subqueue):prefix(name),
+                                unpack(zrem))
+                            zrem = {}
+                        end
                     end
                 end
 
@@ -177,7 +206,7 @@ end
 
 --! @brief Return all the settings for this queue
 function QsomeQueue:config(key, value)
-    if key then
+    if key ~= nil then
         if value then
             return redis.call(
                 'hset', self:prefix()..':config', key, value)
@@ -209,4 +238,65 @@ function QsomeQueue:jobs(now)
         end
     end
     return response
+end
+
+--! @brief Return the length of the queue
+function QsomeQueue:length()
+    local total = 0
+    for i, qname in ipairs(self:subqueues()) do
+        total = total + Qless.queue(qname):length()
+    end
+    return total
+end
+
+--! @brief Get some stats
+function QsomeQueue:stats(now, date)
+    local subqueues = self:subqueues()
+    local results = {
+        failed   = 0,
+        failures = 0,
+        retries  = 0,
+        wait     = nil,
+        run      = nil
+    }
+    for i, subqueue in ipairs(subqueues) do
+        local stats = Qless.queue(subqueue):stats(now, date)
+        results['failed']   = results['failed']   + stats['failed']
+        results['failures'] = results['failures'] + stats['failures']
+        results['retries']  = results['retries']  + stats['retries']
+        if results['wait'] == nil then
+            results['wait'] = stats['wait']
+            results['run' ] = stats['run' ]
+        else
+            -- Wait stats
+            results['wait']['mean'] = 
+                (results['wait']['mean'] * results['wait']['count']) +
+                (  stats['wait']['mean'] *   stats['wait']['count'])
+            results['wait']['count'] = 
+                results['wait']['count'] + stats['wait']['count']
+            if (results['wait']['count'] > 0) then
+                results['wait']['mean'] =
+                    results['wait']['mean'] / results['wait']['count']
+            end
+            -- Run stats
+            results['run']['mean'] = 
+                (results['run']['mean'] * results['run']['count']) +
+                (  stats['run']['mean'] *   stats['run']['count'])
+            results['run']['count'] = 
+                results['run']['count'] + stats['run']['count']
+            if (results['run']['count'] > 0) then
+                results['run']['mean'] =
+                    results['run']['mean'] / results['run']['count']
+            end
+
+            -- Merge the histograms
+            for j=1,#stats['wait']['histogram'] do
+                results['wait']['histogram'][j] = (results['wait']['histogram'][j] or 0) + stats['wait']['histogram'][j]
+            end
+            for j=1,#stats['run']['histogram'] do
+                results['run']['histogram'][j] = (results['run']['histogram'][j] or 0) + stats['run']['histogram'][j]
+            end
+        end
+    end
+    return results
 end
