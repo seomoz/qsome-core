@@ -5,7 +5,9 @@ function QsomeJob:complete(now, worker, queue, data, ...)
     -- queue, but I think we're ok for now
     local rqueue = redis.call('hget', 'ql:j:' .. self.jid, 'queue')
 
-    -- Read in all the optional parameters
+    -- Read in all the optional parameters. The ... options are of the form
+    -- `key`, `value`, `key`, `value`, so this snippet is designed to iterate
+    -- over all the pairs and make a map of the keys to the values.
     local options = {}
     for i = 1, #arg, 2 do options[arg[i]] = arg[i + 1] end
     local nextq   = options['next']
@@ -45,14 +47,18 @@ function QsomeJob:data()
     local data = Qless.job(self.jid):data()
     if data ~= nil then
         -- Now augment the job data with a hash property
-        data['hash'] = redis.call('hget', 'ql:j:' .. self.jid, 'hash')
+        data['hash'] = self:hash()
     end
     return data
 end
 
 --! @brief Return the hash of the job
-function QsomeJob:hash()
-    return redis.call('hget', 'ql:j:' .. self.jid, 'hash')
+function QsomeJob:hash(value)
+    if value == nil then
+        return redis.call('hset', QsomeJob.ns .. self.jid, 'hash', value)
+    else
+        return redis.call('hget', QsomeJob.ns .. self.jid, 'hash')
+    end
 end
 
 --! @brief Heartbeat a job

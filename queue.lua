@@ -3,16 +3,8 @@
 -------------------------------------------------------------------------------
 -- Auxilary keys
 --
--- :available -- stores a sorted set of the subqueues available to pick work
---      from. Each element's score is the time when the last piece of work from
---      that queue was completed, and so are sorted in order of which should be
---      used next. This implements a least-recently used sort of order
---
--- :active -- a hash of the counts of jobs running in various subqueues. The
---      reason that we need this around is that when resizing, we can get the
---      case where a subqueue might have two active jobs. Therefore we must
---      keep a count around so that we don't immediately put it back into the
---      queue for work.
+-- :available -- stores a list of all the subqueues available to pick work
+--      from. These are round-robined
 
 --! @brief Create a queue with the provided number of subqueues
 --! @param subqueues - the number of subqueues in this queue
@@ -122,7 +114,7 @@ function QsomeQueue:put(now, jid, klass, hash, data, delay, ...)
     if response then
         -- Qless doesn't save the hash into the job data, so we must do that
         -- ourselves
-        redis.call('hset', 'ql:j:' .. jid, 'hash', hash)
+        Qsome.job(jid):hash(hash)
     end
     return response
 end
@@ -149,6 +141,10 @@ function QsomeQueue:resize(size)
             end
 
             for subqueue, jids in pairs(jid_map) do
+                -- We need to keep track of the jids we'll need to remove from
+                -- this subqueue, and then we'll get rid of them all in one go.
+                -- The reason is that for sorted sets it's more efficient to
+                -- zrem several items at once
                 local zrem = {}
                 for k=1,#jids,2 do
                     local jid   = jids[k]
@@ -161,8 +157,12 @@ function QsomeQueue:resize(size)
                     if to ~= subqueue then
                         redis.call(
                             'zadd', Qless.queue(to):prefix(name), score, jid)
-                        redis.call('hset', 'ql:j:' .. jid, 'queue', to)
+                        redis.call('hset', QsomeJob.ns .. jid, 'queue', to)
                         table.insert(zrem, jid)
+                        -- We can only zrem so many items at once, and so if we
+                        -- ever exceed some arbitrary (but acceptable) limit,
+                        -- then we should purge some of the items we've queued
+                        -- up to remove.
                         if #zrem > 100 then
                             redis.call('zrem',
                                 Qless.queue(subqueue):prefix(name),

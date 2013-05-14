@@ -14,7 +14,7 @@ QsomeQueue.__index = QsomeQueue
 -- Forward declaration of QsomeJob
 local QsomeJob = {
     -- The Qsome job namespace
-    ns = 'ql:j:'
+    ns = QlessJob.ns
 }
 QsomeJob.__index = QsomeJob
 

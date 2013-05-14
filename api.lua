@@ -28,10 +28,6 @@ QsomeAPI.tracked = function(now)
     return cjson.encode(Qsome.tracked())
 end
 
--- QsomeAPI.unfail = function(now, queue, group, count)
---     return Qsome.queue(queue):unfail(now, group, count)
--- end
-
 -------------------------------------------------------------------------------
 -- Queue manipulation
 -------------------------------------------------------------------------------
@@ -119,18 +115,6 @@ QsomeAPI['recur.get'] = function(now, jid)
     return cjson.encode(Qless.recurring(jid):data())
 end
 
--- QsomeAPI['recur.update'] = function(now, jid, ...)
---     return Qless.recurring(jid):update(unpack(arg))
--- end
-
--- QsomeAPI['recur.tag'] = function(now, jid, ...)
---     return Qless.recurring(jid):tag(unpack(arg))
--- end
-
--- QsomeAPI['recur.untag'] = function(now, jid, ...)
---     return Qless.recurring(jid):untag(unpack(arg))
--- end
-
 -------------------------------------------------------------------------------
 -- Configuration
 -------------------------------------------------------------------------------
@@ -146,55 +130,6 @@ end
 QsomeAPI['config.unset'] = function(now, key)
     return Qless.config.unset(key)
 end
-
--- QsomeAPI.retry = function(now, jid, queue, worker, delay)
---     return Qless.job(jid):retry(now, queue, worker, delay)
--- end
-
--- QsomeAPI.depends = function(now, jid, command, ...)
---     return Qless.job(jid):depends(command, unpack(arg))
--- end
-
--- QsomeAPI.heartbeat = function(now, jid, worker, data)
---     return Qless.job(jid):heartbeat(now, worker, data)
--- end
-
--- QsomeAPI.tag = function(now, command, ...)
---     return cjson.encode(Qless.tag(now, command, unpack(arg)))
--- end
-
--- QsomeAPI.priority = function(now, jid, priority)
---     return Qless.job(jid):priority(priority)
--- end
-
--- QsomeAPI.pop = function(now, queue, worker, count)
---     return cjson.encode(Qless.queue(queue):pop(now, worker, count))
--- end
-
--- QsomeAPI.pause = function(now, ...)
---     return Qless.pause(unpack(arg))
--- end
-
--- QsomeAPI.unpause = function(now, ...)
---     return Qless.unpause(unpack(arg))
--- end
-
--- QsomeAPI.put = function(now, queue, jid, klass, hsh, data, delay, ...)
---     return Qsome.queue(queue):put(
---         now, jid, klass, hsh, data, delay, unpack(arg))
--- end
-
--- -- Recurring job stuff
--- QsomeAPI.recur = function(now, queue, jid, klass, hsh, data, spec, ...)
---     return Qless.queue(queue):recur(
---         now, jid, klass, hsh, data, spec, unpack(arg))
--- end
-
--- QsomeAPI.unrecur = function(now, jid)
---     return Qless.recurring(jid):unrecur()
--- end
-
-
 
 -------------------------------------------------------------------------------
 -- Function lookup
