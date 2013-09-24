@@ -14,3 +14,7 @@ qsome.lua: qsome-lib.lua api.lua
 
 clean:
 	rm -f qsome{,-lib}.lua qless-core/qless{,-lib}.lua
+
+.PHONY: test
+test: qsome.lua
+	nosetests --exe -v

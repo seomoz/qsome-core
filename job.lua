@@ -1,3 +1,10 @@
+-------------------------------------------------------------------------------
+-- QsomeJob Definition
+--
+-- This is really just a thin wrapper around the Qless job, but we need it to
+-- get some hooks into certain events.
+-------------------------------------------------------------------------------
+
 -- Complete this job
 function QsomeJob:complete(now, worker, queue, data, ...)
     -- We're ignoring the queue provided by the worker for now. At some point
@@ -47,7 +54,8 @@ function QsomeJob:data()
     local data = Qless.job(self.jid):data()
     if data ~= nil then
         -- Now augment the job data with a hash property
-        data['hash'] = self:hash()
+        data['queue'] = string.gsub(data['queue'], "-%d+$", '')
+        data['hash'] = tonumber(self:hash())
     end
     return data
 end
@@ -55,9 +63,9 @@ end
 --! @brief Return the hash of the job
 function QsomeJob:hash(value)
     if value == nil then
-        return redis.call('hset', QsomeJob.ns .. self.jid, 'hash', value)
-    else
         return redis.call('hget', QsomeJob.ns .. self.jid, 'hash')
+    else
+        return redis.call('hset', QsomeJob.ns .. self.jid, 'hash', value)
     end
 end
 

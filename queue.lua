@@ -20,9 +20,13 @@ function QsomeQueue:prefix()
     return QsomeQueue.ns .. self.name
 end
 
---! @brief Pop the next subqueue we should pop from. This also finds any
---      subqueues that have jobs that have jobs with lost locks
-function QsomeQueue:pop_subqueue(now)
+--! @brief Pop the provided number of jobs from the queue
+--! @param count - number of jobs to pop
+function QsomeQueue:pop(now, worker, count)
+    -- Ensure that count is in fact a number
+    count = assert(tonumber(count),
+        'Queue.pop(): Count not a number: ' .. tostring(count))
+
     -- If there is no queue of our subqueues, then we'll instantiate it
     local key = self:prefix()..':available'
     local available = redis.call('lrange', key, 0, -1)
@@ -37,35 +41,16 @@ function QsomeQueue:pop_subqueue(now)
     -- Each queue should have a configurable rate limit on the number of jobs
     -- that can be in flight in a queue at any given time.
     local limit = tonumber(self:config('concurrency') or 1)
-    local i = 0
-    return  function()
-                while i < #available do
-                    i = i + 1
-                    local subqueue = redis.call('rpoplpush', key, key)
-                    local running = Qless.queue(subqueue).locks.running(now)
-                    if running < limit then
-                        return subqueue
-                    end
-                end
-            end
-end
-
---! @brief Pop the provided number of jobs from the queue
---! @param count - number of jobs to pop
-function QsomeQueue:pop(now, worker, count)
-    -- Ensure that count is in fact a number
-    count = assert(tonumber(count),
-        'Queue.pop(): Count not a number: ' .. tostring(count))
     local jids = {}
-    local iter = self:pop_subqueue(now)
-    local subqueue = iter()
-    while (#jids < count) and subqueue do
-        local _jids = Qless.queue(subqueue):pop(now, worker, 1)
-        if #_jids then
-            local jid = _jids[1]
-            table.insert(jids, jid)
+    local i = 0
+    while (#jids < count) and (i < #available) do
+        i = i + 1
+        local subqueue = redis.call('rpoplpush', key, key)
+        local running = Qless.queue(subqueue).locks.running(now)
+        if running < limit then
+            local number = math.min(count - #jids, limit - running)
+            table.extend(jids, Qless.queue(subqueue):pop(now, worker, number))
         end
-        subqueue = iter()
     end
     return jids
 end
@@ -79,6 +64,13 @@ function QsomeQueue:peek(now, count)
     local jids = {}
     local key = self:prefix()..':available'
     local available = redis.call('lrange', key, 0, -1)
+    if #available == 0 then
+        -- If this is empty, then there are two possibilities -- we've not
+        -- initialized it, or there are legitimately no queues available. So we
+        -- must check the 'active'
+        available = self:subqueues()
+        redis.call('lpush', key, unpack(available))
+    end
     for i, subqueue in ipairs(available) do
         if #jids >= count then
             break
