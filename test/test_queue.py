@@ -3,6 +3,24 @@
 from common import TestQsome
 
 
+class TestGeneral(TestQsome):
+    '''Test general queue-y things'''
+    def test_malformed(self):
+        '''Enumerate a bunch of malformed requests'''
+        self.assertMalformed(self.lua, [
+            ('queue.resize', 0, 'queue'),              # No size
+            ('queue.resize', 0, 'queue', 'foo'),       # Size not a number
+            ('queue.resize', 0, 'queue', -2),          # Negative size
+            ('queue.subqueues', 0)                     # No queue provided
+        ])
+
+    def test_subqueues(self):
+        '''We should have access to the number of subqueues for a queue'''
+        self.assertEqual(len(self.lua('queue.subqueues', 0, 'queue')), 1)
+        self.lua('queue.resize', 0, 'queue', 2)
+        self.assertEqual(len(self.lua('queue.subqueues', 0, 'queue')), 2)
+
+
 class TestPut(TestQsome):
     '''Test putting jobs into a queue'''
     # For reference:
