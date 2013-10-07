@@ -39,13 +39,13 @@ QsomeAPI['queue.resize'] = function(now, queue, size)
     return Qsome.queue(queue):resize(size)
 end
 
-QsomeAPI['queue.put'] = function(
+QsomeAPI['put'] = function(
     now, queue, jid, klass, hash, data, delay, ...)
     return Qsome.queue(queue):put(
         now, jid, klass, hash, data, delay, unpack(arg))
 end
 
-QsomeAPI['queue.pop'] = function(now, queue, worker, count)
+QsomeAPI['pop'] = function(now, queue, worker, count)
     local jids = Qsome.queue(queue):pop(now, worker, count)
     local response = {}
     for i, jid in ipairs(jids) do
@@ -58,11 +58,11 @@ QsomeAPI['queue.config'] = function(now, queue, option, value)
     return cjson.encode(Qsome.queue(queue):config(option, value))
 end
 
-QsomeAPI['queue.length'] = function(now, queue)
+QsomeAPI['length'] = function(now, queue)
     return Qsome.queue(queue):length()
 end
 
-QsomeAPI['queue.peek'] = function(now, queue, count)
+QsomeAPI['peek'] = function(now, queue, count)
     local jids = Qsome.queue(queue):peek(now, count)
     local response = {}
     for i, jid in ipairs(jids) do
@@ -71,7 +71,7 @@ QsomeAPI['queue.peek'] = function(now, queue, count)
     return cjson.encode(response)
 end
 
-QsomeAPI['queue.stats'] = function(now, queue, date)
+QsomeAPI['stats'] = function(now, queue, date)
     return cjson.encode(Qsome.queue(queue):stats(now, date))
 end
 
@@ -88,6 +88,15 @@ function QsomeAPI.get(now, jid)
     return cjson.encode(data)
 end
 
+-- Get a number of jobs
+function QsomeAPI.multiget(now, ...)
+  local results = {}
+  for i, jid in ipairs(arg) do
+    table.insert(results, Qsome.job(jid):data())
+  end
+  return cjson.encode(results)
+end
+
 QsomeAPI.complete = function(now, jid, worker, queue, data, ...)
     return Qsome.job(jid):complete(now, worker, queue, data, unpack(arg))
 end
@@ -100,11 +109,11 @@ QsomeAPI.cancel = function(now, ...)
     return Qless.cancel(unpack(arg))
 end
 
-QsomeAPI['job.heartbeat'] = function(now, jid, worker, data)
+QsomeAPI['heartbeat'] = function(now, jid, worker, data)
     return Qsome.job(jid):heartbeat(now, worker, data)
 end
 
-QsomeAPI['job.track'] = function(now, command, jid)
+QsomeAPI['track'] = function(now, command, jid)
     return cjson.encode(Qless.track(now, command, jid))
 end
 
