@@ -35,7 +35,9 @@ function QsomeQueue:pop(now, worker, count)
         -- initialized it, or there are legitimately no queues available. So we
         -- must check the 'active'
         available = self:subqueues()
-        redis.call('lpush', key, unpack(available))
+        for group in table.grouper(available, 1000) do
+            redis.call('lpush', key, unpack(group))
+        end
     end
 
     -- Each queue should have a configurable rate limit on the number of jobs
@@ -91,7 +93,7 @@ end
 --! @param hash - integer hash associated with the job
 --! @param data - json-encoded data for the job
 --! @param delay - seconds the job must wait before running
-function QsomeQueue:put(now, jid, klass, hash, data, delay, ...)
+function QsomeQueue:put(now, worker, jid, klass, hash, data, delay, ...)
     -- The first order of real business is to determine which subqueue this
     -- job will go into
     local count = tonumber(self:config('size') or 1)
@@ -102,7 +104,7 @@ function QsomeQueue:put(now, jid, klass, hash, data, delay, ...)
         redis.call('zadd', Qsome.ns .. 'queues', now, self.name)
     end
     local response = Qless.queue(subqueue):put(
-        now, jid, klass, data, delay, unpack(arg))
+        now, worker, jid, klass, data, delay, unpack(arg))
     if response then
         -- Qless doesn't save the hash into the job data, so we must do that
         -- ourselves

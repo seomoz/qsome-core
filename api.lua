@@ -40,9 +40,9 @@ QsomeAPI['queue.resize'] = function(now, queue, size)
 end
 
 QsomeAPI['put'] = function(
-    now, queue, jid, klass, hash, data, delay, ...)
+    now, me, queue, jid, klass, hash, data, delay, ...)
     return Qsome.queue(queue):put(
-        now, jid, klass, hash, data, delay, unpack(arg))
+        now, me, jid, klass, hash, data, delay, unpack(arg))
 end
 
 QsomeAPI['pop'] = function(now, queue, worker, count)
