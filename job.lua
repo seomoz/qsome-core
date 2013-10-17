@@ -33,7 +33,7 @@ function QsomeJob:complete(now, worker, queue, data, ...)
         local job = self:data()
         local resp = Qless.job(self.jid):complete(now, worker, rqueue, data)
         if resp == 'complete' then
-            Qsome.queue(nextq):put(now, self.jid, job.klass, job.hash,
+            Qsome.queue(nextq):put(now, worker, self.jid, job.klass, job.hash,
                 data, delay,
                 'retries', job.retries,
                 'tags', cjson.encode(job.tags),
