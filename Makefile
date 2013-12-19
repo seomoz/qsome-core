@@ -1,6 +1,6 @@
 all: qsome.lua qsome-lib.lua
 
-qless-core/qless-lib.lua: qless-core/*
+qless-core/qless-lib.lua: qless-core/Makefile
 	make -C qless-core qless-lib.lua
 
 qsome-lib.lua: base.lua job.lua queue.lua qless-core/qless-lib.lua
