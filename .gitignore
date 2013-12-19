@@ -1,3 +1,4 @@
-qsome.lua
-qsome-lib.lua
 *.pyc
+qsome-lib.lua
+qsome.lua
+build
