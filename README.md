@@ -14,9 +14,12 @@ a single unified library. To build it:
 
 ```bash
 # From the root qsome-core directory
-git submodule init
-git submodule update
-make qsome.lua
+git submodule update --init --recursive
+virtualenv ENV
+source ENV/bin/activate
+pip install -r requirements.txt
+make
+make test
 ```
 
 Purpose
@@ -25,4 +28,3 @@ For a particular project, we need to implement queues that are composed of
 subqueues. Each subqueue may have at most one job being processed at any given
 time. This is functionality that should be fairly easy to describe in terms of
 existing `qless` operations.
-
