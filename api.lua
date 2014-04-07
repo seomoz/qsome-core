@@ -55,7 +55,12 @@ QsomeAPI['pop'] = function(now, queue, worker, count)
 end
 
 QsomeAPI['queue.config'] = function(now, queue, option, value)
-    return cjson.encode(Qsome.queue(queue):config(option, value))
+    local result = Qsome.queue(queue):config(option, value)
+    if type(result) == 'table' then
+        return cjson.encode(result)
+    else
+        return result
+    end
 end
 
 QsomeAPI['length'] = function(now, queue)
