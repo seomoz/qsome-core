@@ -283,3 +283,23 @@ class TestPop(TestQsome):
         # With these jobs complete, we should now be able to pop one job
         self.assertEqual(
             len(self.lua('pop', 13, 'queue', 'worker', 10)), 1)
+
+
+class TestConfig(TestQsome):
+    '''Test setting config for a queue'''
+    def test_get_missing(self):
+        '''Missing config options should yield None'''
+        self.assertEqual(
+            self.lua('queue.config', 0, 'queue', 'key'), None)
+
+    def test_set_config(self):
+        '''Can set configuration keys'''
+        self.lua('queue.config', 0, 'queue', 'key', 'value')
+        self.assertEqual(
+            self.lua('queue.config', 1, 'queue', 'key'), 'value')
+
+    def test_get_all_config(self):
+        '''Getting all of a queue's config gives a dict'''
+        self.lua('queue.config', 0, 'queue', 'key', 'value')
+        self.assertEqual(
+            self.lua('queue.config', 1, 'queue'), {'key': 'value'})
