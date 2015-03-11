@@ -1,6 +1,8 @@
 Qsome Core
 ==========
-It's like `qless`, but gruesome.
+[![Build Status](https://travis-ci.org/seomoz/qsome-core.svg?branch=master)](https://travis-ci.org/seomoz/qsome-core)
+
+It's like [`qless`](https://github.com/seomoz/qless-core), but gruesome.
 
 This is in part an experiment to build a library on top of qless by including
 the core qless functionality within the body of this library's lua scripts. In
@@ -28,3 +30,9 @@ For a particular project, we need to implement queues that are composed of
 subqueues. Each subqueue may have at most one job being processed at any given
 time. This is functionality that should be fairly easy to describe in terms of
 existing `qless` operations.
+
+![Status: Incubating](https://img.shields.io/badge/status-incubating-blue.svg?style=flat)
+![Team: Big Data](https://img.shields.io/badge/team-big_data-green.svg?style=flat)
+![Scope: External](https://img.shields.io/badge/scope-external-green.svg?style=flat)
+![Open Source: Yes](https://img.shields.io/badge/open_source-MIT-green.svg?style=flat)
+![Critical: No](https://img.shields.io/badge/critical-no-lightgrey.svg?style=flat)
